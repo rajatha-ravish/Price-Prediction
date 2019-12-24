@@ -1,0 +1,188 @@
+---
+title: "Linear Regression of TC"
+author: "Rajatha Ravish"
+date: "10/18/2019"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Input data, choose predictors
+```{r}
+car.df <- read.csv("C:/Users/iraja/Downloads/ToyotaCorolla.csv")
+# use first 1000 rows of data
+car.df <- car.df[1:1000, ]
+View(car.df)
+t(t(names(car.df)))
+# select variables for regression
+selected.var <- c(3, 4, 7, 8, 9, 10, 12, 13, 14, 17, 18)
+#car.df is a data frame with 1000 observations on 39 variables.
+
+###The required data were collected on all previous sales of used Toyota Corollas at the dealership and saved in to ToyotaCorolla.csv. The data include 39 variable information on the car such as the sales price of car,  age, mileage, fuel type, etc.. So, here we are using first 1000 records in the dataset. Further we are choosing the predictors by reducing the number of variables from 39 to 11 variables( "Price", "Age", "KM", "Fuel_Type", "HP", "Met_Color" ,"Automatic", "CC", "Doors", "Quarterly_Tax", "Weight" )
+
+```
+### Partition the data
+```{r}
+set.seed(1)  # set seed for reproducing the partition
+train.index <- sample(c(1:1000), 600) #To take 60% of data as training set . 
+ #train.index holds 600 index of rows out of the 1000 present in car.df
+
+head(train.index)
+train.df <- car.df[train.index, selected.var]
+valid.df <- car.df[-train.index, selected.var]#Assigning remaining 40% of the data to validation by dropping the 60% of data considered in training set
+# valid.df dataframe holds 400 data rows with 11 column
+###Out of 1000 data rows considered, we are partitioning the data into training (60%) and validation (40%) sets
+
+```
+### Run model
+```{r}
+
+# use lm() to run a linear regression of Price on all 11 predictors in the
+# training set. 
+# use . after ~ to include all the remaining columns in train.df as predictors.
+car.lm <- lm(Price ~ ., data = train.df)
+options(scipen = 999)#To ensure numbers are not displayed in scientific notation
+summary(car.lm)#To print output obtained from linear regression
+             #car.lm contains a linear regression model where content is in list format
+
+
+
+###Linear regression model is runned for price vs all the remaining columns in train.df as predictors.options() is used  to ensure numbers are not displayed in scientific notation.Summary of result is displayed
+
+ 
+###SUMARRY OF OUTPUT
+#First item shown in the output is the formula R used to fit the data
+
+#Residuals: The next item in the model output is residuals.Residuals are essentially the difference between the actual observed response values and the response values that the model predicted.The Residuals section of the model output breaks it down into 5 summary points.When assessing how well the model fit the data, we should look for a symmetrical distribution across these points , median should be close to zero and the first and third quartile should have similar absolute values.We here have a median of 0.9 and absolute values of 729.9 and 739.3 for 1st and 3rd quartile respectively.So we can see that the distribution of the residuals do not appear to be strongly symmetrical. That means that the model predicts certain points that fall far away from the actual observed points. 
+
+#Coefficients: Intercept represents that the minimum value of Price that will be received, if all the variables are constant or absent. Slope tells us about the rate of change which Price variable will witness, with every one unit change in the independent variable.
+
+#The coefficient Standard Error measures the average amount that the coefficient estimates vary from the actual average value of our response variable. We’d ideally want a lower number relative to its coefficients.
+
+#In the above output Pr(>|t|) represents the p-value, which can be compared against alpha value of 0.05 to ensure if the corresponsing beta coefficient is siginificant or not. In the above output Pr(>|t|) represents the p-value, which can be compared against alpha value of 0.05 to ensure if the corresponsing beta coefficient is siginificant or not. So now we know that Intercecpt,Age, KM Fuel_TypePetrol, HP, Quaterly Tax, Weight  are some significant variable.
+
+#Residual Standard Error:Residual Standard Error is measure of the quality of a linear regression fit. Theoretically, every linear model is assumed to contain an error term E. Due to the presence of this error term, we are not capable of perfectly predicting our response variable (price) from the predictor . The Residual Standard Error is the average amount that the response (price) will deviate from the true regression line.So here, we have a difference of $1392. This error magnitude might be small relative to the car price, but should be taken into account when considering the profit.Residual Standard Error was calculated with 588 degrees of freedom.  Degrees of freedom are the number of data points that went into the estimation of the parameters used after taking into account these parameters (restriction).
+
+#Multiple R-squared: 0.8703 - The R-squared values is formally called as coefficient of determination. Here, 0.8703 indicates that the Intercecpt, Age, KM Fuel_TypePetrol, HP, Quaterly Tax, Weight  variables when put together are able to explain 87.03% of variance in Price variable. The value of R-squared lies between 0 to 1. In practical aplications, if the values i greater than 0.70 we consider it as a good model.
+
+#Adjusted R-squared: 0.8679 - The Adjusted R-squared value indicate if the addition of new information (variable) brings significant improvement to the model or not.  Increase in the adjusted R-squared value with addition of indicates the variable is useful and helps by bringing significant improvement to the model. 
+
+#F-statistic: 358.7 on 11 and 588 DF, p-value: < 0.00000000000000022 - This line talks about the global testing of the model. F-statistic is a good indicator of whether there is a relationship between our predictor and the response variables. Here null hypothesis is that the model is not significant and alternative is that the model is significant. According to the p-values < 0.05, our model is significant.
+
+```
+### Make predictions on a hold-out set
+```{r}
+library(forecast)
+# use predict() to make predictions on a new set. 
+car.lm.pred <- predict(car.lm, valid.df)# use predict() to make predictions on a new set. car.lm.pred holds the numeric value obtained by the predict() operator
+options(scipen=999, digits = 0)#To ensure numbers are not displayed in scientific notation
+some.residuals <- valid.df$Price[1:20] - car.lm.pred[1:20] #To obtain residual by finding difference of actual and predicted price.
+data.frame("Predicted" = car.lm.pred[1:20], "Actual" = valid.df$Price[1:20],
+           "Residual" = some.residuals)#To display predicted, actual and residual price in a single table. Here all numeric values put together in single data frame.
+#Output shows a sample of predicted prices for 20 cars in the validation set, using the estimated model. It gives the predictions and their errors (relative to the actual prices)for these 20 cars.
+
+options(scipen=999, digits = 3)
+# use accuracy() to compute common accuracy measures.
+accuracy(car.lm.pred, valid.df$Price)
+
+###SUMARRY OF OUTPUT
+
+#The regression coefficients obtained in previous chunk are then used to predict prices of individual used Toyota Corolla cars based on their age, mileage, and so on.Output of table with actual, predicted and residual price shows a sample of predicted prices for 20 cars in the validation set, using the estimated model. It gives the predictions and their errors (relative to the actual prices)for these 20 cars.Residuals calculated by  finding difference of actual and predicted price.
+
+#Also overall measures of predictive accuracy is calculated.When assessing the quality of a model, being able to accurately measure its prediction error is of key importance.Accuracy of prediction models can be assessed by using following metrics:
+#ME: 19.6-Mean Error is an informal term that usually refers to the average of -- all the errors in a set.
+#MAE:1042-Mean Average Error is absolute difference between the actual and forecasted values and finds the average.This error magnitude might be small relative to the car price, but should be taken into account when considering the profit.
+#RMSE:1325-Root Mean Square Error take the difference between the actual and the forecast,then squares the difference, finds the average of all the squares and then finds the square root
+#MPE:-0.75 Mean Percentage Error is the computed average of percentage errors by which forecasts of a model differ from actual values of the quantity being forecast.
+#MAPE: 9.35%-Mean Absolute Percentage Error is good method in the sense that it is the percentage of the error compared to the actual value.  
+# By closesly observing the above error values , each of them are considerably acceptable. Since profit is taken into account even small relative error makes it accountable.
+
+```
+###Histogram of residuals
+```{r}
+library(forecast)
+car.lm.pred <- predict(car.lm, valid.df)#use predict() to make predictions on a new set
+all.residuals <- valid.df$Price - car.lm.pred #To obtain residual by finding difference of actual and predicted price which is numeric.
+length(all.residuals[which(all.residuals > -2000 & all.residuals < 2000)])/400
+hist(all.residuals, breaks = 25, xlab = "Residuals", main = "")#To plot histogram of residuals
+
+#A histogram of the residuals shows that most of the errors are between +$2000 to -2000. This error magnitude might be small relative to the car price, but should be taken into account when considering the profit.
+```
+### Run  an exhaustive search for the best model
+```{r}
+# use regsubsets() in package leaps to run an exhaustive search. 
+# unlike with lm, categorical predictors must be turned into dummies manually.
+
+# create dummies for fuel type
+train.index <- sample(c(1:1000), 600)  #To take 60% of data as training set . 
+train.df <- car.df[train.index, selected.var]#Assigning sampled 60% of the data to training set with the selected 11columns
+dim(train.df)#to get dimension of data frame train.df .It has got 600 rows and 13 columns
+
+valid.df <- car.df[-train.index, selected.var]#Assigning remaining 40% of the data to validation by dropping the #60% of data considered in training set
+Fuel_Type1 <- as.data.frame(model.matrix(~ 0 + Fuel_Type, data=train.df))#model.matrix creates a design matrix from the description given in formula), using the data in data which must contain columns with the same names as would be created by a call to model
+train.df <- cbind(train.df[,-4], Fuel_Type1[,])# replace Fuel_Type column with 2 dummies
+head(train.df)#To see top 5 rows with column names of data frame train.df
+
+
+Fuel_Type2 <- as.data.frame(model.matrix(~ 0 + Fuel_Type, data=valid.df))#model.matrix creates a design matrix from the description given in formula, using the data in data which must contain columns with the same names as would be created by a call to model
+# replace Fuel_Type column with 2 dummies
+valid.df <- cbind(valid.df[,-4], Fuel_Type2[,])
+head(valid.df)
+
+dim(valid.df)
+
+install.packages("leaps", repos="http:cran.us.r-project.org") #To install leaps package
+library(leaps) #To add library
+search <- regsubsets(Price ~ ., data = train.df, nbest = 1, nvmax = dim(train.df)[2],
+                     method = "exhaustive")#regsubsets() is used to  run exaushtive search
+sum <- summary(search)
+
+# show models
+sum$which
+
+# show metrics
+sum$rsq
+sum$adjr2
+sum$cp
+
+#Output reports the best model with a single predictor, two predictors, etc. It can be seen that the R2 adj increases until 7-8 predictors are used  and then stabilizes.So choose model with 7 or more predictor. Good models are those that have values of Cp near k + 1 and that have small k .The Cp indicates that a model with 9-11 predictors is good. The dominant predictor in all models is the age of the car, with horsepower and mileage playing important roles as well.
+```
+# use step() to run stepwise regression, backward selection.
+```{r}
+head(valid.df)
+head(train.df)
+car.lm <- lm(Price ~ ., data = train.df)#Linear regression model of price vs all ther car attributes
+car.lm.step <- step(car.lm, direction = "backward")#Regression model run stepwise in the specified diection,Here direction is set to backward
+summary(car.lm.step) #To get the the summary of the output of car.lm.step. This contains a lm in list format
+# Which variables did it drop? Met_Color and Fuel_TypePetrol
+car.lm.step.pred<-predict(car.lm.step,valid.df)
+accuracy(car.lm.step.pred, valid.df$Price)# use accuracy() to compute common accuracy measures.accuracy gives following matrix as output where entries are double.
+
+
+#Backward elimination starts with the full model,and then drops predictors one-by-one.  The algorithm stops when all the remaining predictors have significant contributions.Here the the best model is formed by dropping 2 variables namely, met_color and FueltypePetrol. In the above output we see that AIC for met_color in 8532 in first shown model, by observing AIC of other variables we can say that AIC assosiated with met_color is lower hence it is dropped while creating athe next model.   Adjusted R-squared 0.895 shows that the model is significantly good.
+```
+## Forward selection
+```{r}
+car.lm <- lm(Price ~ ., data = train.df)#Linear regression model of price vs all ther car attributes
+car.lm.step <- step(car.lm, direction = "forward")#Regression model run stepwise in the specified diection,Here direction is set to backward.
+summary(car.lm.step)#To get the the summary of the output of car.lm.step. This contains a lm in list format
+
+# Forward selection Start with no predictors add them one by one . It Starts with no predictors. Then add them one by one.Add the one with largest contribution i.e,find out which variable should be added to the current model to best improve the adjusted r-square. Stop when the addition is not statistically significant.We can see that Adjusted R-squared:  0.895  which is similar to backward selection.We can see that for coefficient of Fuel_TypePetrol is NA because the predictor variables are not all linearly independent.
+```
+#Stepwise 
+```{r}
+# use step() to run stepwise regression.
+car.lm <- lm(Price ~ ., data = train.df)#Linear regression model of price vs all ther car attributes
+car.lm.step <- step(car.lm, direction = "both")#Regression model run stepwise in the specified diection,Here direction is set to both. Hence works by comparing the AIC improvements from dropping each candidate variable, and adding each candidate variable , from the current model.
+
+summary(car.lm.step)  # Which variables were dropped/added?met_color, Fuel_TypePetrol, Automatic, CC
+car.lm.step.pred <- predict(car.lm.step, valid.df)# To predict values based on linear model object.It contains numeric data
+accuracy(car.lm.step.pred, valid.df$Price)# use accuracy() to compute common accuracy measures.accuracy gives following matrix as output where entries are double.
+
+```
+
